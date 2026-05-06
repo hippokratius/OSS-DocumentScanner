@@ -58,11 +58,14 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      # Install the NativeScript CLI globally so the `ns` command is in PATH.
-      # @akylas/nativescript is a fork of the NativeScript CLI; its binary is not
-      # linked into node_modules/.bin due to the workspace hoisting configuration.
+      # The NativeScript CLI (`ns`) is normally a global install for this project.
+      # @akylas/nativescript is the framework fork, not the CLI, so it does not
+      # provide an `ns` binary. We install the standard CLI globally here.
       - name: Install NativeScript CLI globally
-        run: npm install -g @akylas/nativescript@8.9.15
+        run: npm install -g nativescript
+
+      - name: Verify NativeScript CLI
+        run: ns --version
 
       - name: Build debug APK
         run: ns build android --env.adhoc
