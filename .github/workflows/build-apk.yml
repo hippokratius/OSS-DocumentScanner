@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Build & publish debug APK
@@ -55,31 +58,36 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      # Make the NativeScript CLI (ns) available in PATH
+      - name: Add node_modules/.bin to PATH
+        run: echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+
       - name: Build debug APK
-        run: ./node_modules/.bin/ns build android --env.adhoc
+        run: ns build android --env.adhoc
 
-      - name: Find built APK
-        id: apk
+      - name: Prepare release metadata
+        id: meta
         run: |
+          DATE=$(date +%Y%m%d)
+          SHORT_SHA="${GITHUB_SHA::7}"
           APK=$(find build/documentscanner/android/app/build/outputs/apk -name "*.apk" | head -1)
-          echo "path=$APK" >> "$GITHUB_OUTPUT"
-          echo "name=documentscanner-debug-$(date +%Y%m%d)-${GITHUB_SHA::7}.apk" >> "$GITHUB_OUTPUT"
-
-      - name: Rename APK
-        run: cp "${{ steps.apk.outputs.path }}" "${{ steps.apk.outputs.name }}"
+          APK_NAME="documentscanner-debug-${DATE}-${SHORT_SHA}.apk"
+          cp "$APK" "$APK_NAME"
+          echo "apk_name=$APK_NAME"         >> "$GITHUB_OUTPUT"
+          echo "release_name=Debug Build #${{ github.run_number }} ($(date +%Y-%m-%d))" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Pre-Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: debug/${{ github.run_number }}
-          name: "Debug Build #${{ github.run_number }} ($(date +%Y-%m-%d))"
+          name: ${{ steps.meta.outputs.release_name }}
           prerelease: true
-          files: ${{ steps.apk.outputs.name }}
+          files: ${{ steps.meta.outputs.apk_name }}
           body: |
             Automatisch erstellter Debug-Build.
 
             - **Commit:** ${{ github.sha }}
             - **Branch:** ${{ github.ref_name }}
 
-            > Diese APK ist unsigniert (Debug-Keystore) und dient nur zum Testen.
+            > Diese APK ist mit dem Debug-Keystore signiert und dient nur zum Testen.
             > Sie wird **nicht** im Play Store veröffentlicht.
