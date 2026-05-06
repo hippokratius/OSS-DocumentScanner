@@ -58,9 +58,11 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      # Make the NativeScript CLI (ns) available in PATH
-      - name: Add node_modules/.bin to PATH
-        run: echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+      # Install the NativeScript CLI globally so the `ns` command is in PATH.
+      # @akylas/nativescript is a fork of the NativeScript CLI; its binary is not
+      # linked into node_modules/.bin due to the workspace hoisting configuration.
+      - name: Install NativeScript CLI globally
+        run: npm install -g @akylas/nativescript@8.9.15
 
       - name: Build debug APK
         run: ns build android --env.adhoc
@@ -73,7 +75,7 @@ jobs:
           APK=$(find build/documentscanner/android/app/build/outputs/apk -name "*.apk" | head -1)
           APK_NAME="documentscanner-debug-${DATE}-${SHORT_SHA}.apk"
           cp "$APK" "$APK_NAME"
-          echo "apk_name=$APK_NAME"         >> "$GITHUB_OUTPUT"
+          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
           echo "release_name=Debug Build #${{ github.run_number }} ($(date +%Y-%m-%d))" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Pre-Release
