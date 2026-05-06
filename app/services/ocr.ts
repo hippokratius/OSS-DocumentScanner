@@ -4,6 +4,8 @@ import { NoNetworkError } from '@akylas/nativescript-app-utils/error';
 import { ocrDocumentFromFile } from 'plugin-nativeprocessor';
 import type { OCRDocument } from '~/models/OCRDocument';
 import { networkService, wrapNativeHttpException } from '~/services/api';
+import { mistralOcrImage } from '~/services/mistralOcr';
+import { DEFAULT_OCR_ENGINE, SETTINGS_MISTRAL_API_KEY, SETTINGS_OCR_ENGINE } from '~/utils/constants';
 
 export const OCRLanguages = {
     afr: 'Afrikaans',
@@ -145,10 +147,32 @@ export class OCRService extends Observable {
     currentDataPath: string;
     mLanguages: string;
     mDataType: 'best' | 'standard' | 'fast';
+    mOcrEngine: 'tesseract' | 'mistral';
     mDownloadedLanguages: string[] = [];
+
     async start(defaultLanguage: string) {
         this.languages = ApplicationSettings.getString('tesseract_languages', defaultLanguage);
         this.dataType = ApplicationSettings.getString('tesseract_datatype', 'best') as any;
+        this.mOcrEngine = ApplicationSettings.getString(SETTINGS_OCR_ENGINE, DEFAULT_OCR_ENGINE) as 'tesseract' | 'mistral';
+    }
+
+    get ocrEngine() {
+        return this.mOcrEngine;
+    }
+    set ocrEngine(value: 'tesseract' | 'mistral') {
+        this.mOcrEngine = value;
+        ApplicationSettings.setString(SETTINGS_OCR_ENGINE, value);
+    }
+
+    get mistralApiKey(): string | undefined {
+        return ApplicationSettings.getString(SETTINGS_MISTRAL_API_KEY, undefined);
+    }
+    set mistralApiKey(value: string | undefined) {
+        if (value) {
+            ApplicationSettings.setString(SETTINGS_MISTRAL_API_KEY, value);
+        } else {
+            ApplicationSettings.remove(SETTINGS_MISTRAL_API_KEY);
+        }
     }
 
     get downloadedLanguages() {
@@ -238,7 +262,23 @@ export class OCRService extends Observable {
         onProgress?: (progress: number) => void;
         dataType?: string;
     }) {
-        // TODO: do we need to apply colorMatrix to image before doing OCR?
+        if (this.mOcrEngine === 'mistral') {
+            const apiKey = this.mistralApiKey;
+            if (!apiKey) {
+                throw new Error('Mistral API key is not configured');
+            }
+            const page = document.pages[pageIndex];
+            if (!page?.imagePath) {
+                return;
+            }
+            const ocrData = await mistralOcrImage(page.imagePath, apiKey, onProgress);
+            if (ocrData?.blocks?.length) {
+                await document.updatePage(pageIndex, { ocrData }, false, true, true);
+                return ocrData;
+            }
+            return;
+        }
+
         let dataPath = this.currentDataPath;
         if (dataType) {
             dataPath = path.join(this.baseDataPath, dataType);
@@ -253,7 +293,15 @@ export class OCRService extends Observable {
     }
 
     async ocrImage({ dataType, imagePath, language = this.mLanguages, onProgress }: { language?: string; imagePath: string; onProgress?: (progress: number) => void; dataType?: string }) {
-        // TODO: do we need to apply colorMatrix to image before doing OCR?
+        if (this.mOcrEngine === 'mistral') {
+            const apiKey = this.mistralApiKey;
+            if (!apiKey) {
+                throw new Error('Mistral API key is not configured');
+            }
+            DEV_LOG && console.log('ocrImage mistral', imagePath);
+            return mistralOcrImage(imagePath, apiKey, onProgress);
+        }
+
         let dataPath = this.currentDataPath;
         if (dataType) {
             dataPath = path.join(this.baseDataPath, dataType);

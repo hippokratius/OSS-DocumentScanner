@@ -46,6 +46,9 @@ export const SETTINGS_QUICK_TOGGLE_ENABLED = 'quick_toggle_enabled';
 export const SETTINGS_OCR_COPY_USE_SPACE = 'ocr_copy_use_space';
 export const SETTINGS_CARD_ALWAYS_SHOW_NAME = 'card_always_show_name';
 export const SETTINGS_ENABLE_CRASH_REPORT = 'enable_crash_report';
+export const SETTINGS_OCR_ENGINE = 'ocr_engine';
+export const SETTINGS_MISTRAL_API_KEY = 'mistral_api_key';
+export const DEFAULT_OCR_ENGINE = 'tesseract';
 
 export const TRANSFORMS_SPLIT = '|';
 
