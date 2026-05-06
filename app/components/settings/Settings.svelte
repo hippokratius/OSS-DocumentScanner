@@ -39,6 +39,7 @@
         DEFAULT_NB_COLUMNS_VIEW,
         DEFAULT_NB_COLUMNS_VIEW_LANDSCAPE,
         DEFAULT_OCR_COPY_USE_SPACE,
+        DEFAULT_OCR_ENGINE,
         DEFAULT_PDF_OPTIONS_STRING,
         DOCUMENT_NAME_FORMAT,
         DOCUMENT_NOT_DETECTED_MARGIN,
@@ -68,7 +69,9 @@
         SETTINGS_NB_COLUMNS_LANDSCAPE,
         SETTINGS_NB_COLUMNS_VIEW,
         SETTINGS_NB_COLUMNS_VIEW_LANDSCAPE,
+        SETTINGS_MISTRAL_API_KEY,
         SETTINGS_OCR_COPY_USE_SPACE,
+        SETTINGS_OCR_ENGINE,
         SETTINGS_QUICK_TOGGLE_ENABLED,
         SETTINGS_ROOT_DATA_FOLDER,
         SETTINGS_START_ON_CAM,
@@ -86,6 +89,7 @@
     import { share } from '@akylas/nativescript-app-utils/share';
     import { inappItems, presentInAppSponsorBottomsheet } from '@shared/utils/inapp-purchase';
     import OCRSettingsBottomSheet from '../ocr/OCRSettingsBottomSheet.svelte';
+    import { ocrService } from '~/services/ocr';
     import { restoreSettings } from '~/utils/settings.android';
     const version = __APP_VERSION__ + ' Build ' + __APP_BUILD_NUMBER__;
     const storeSettings = {};
@@ -145,6 +149,38 @@
         switch (id) {
             case 'ocr':
                 return [
+                    {
+                        id: 'setting',
+                        key: SETTINGS_OCR_ENGINE,
+                        title: lc('ocr_engine'),
+                        description: lc('ocr_engine_desc'),
+                        values: [
+                            { title: lc('tesseract'), value: 'tesseract' },
+                            { title: lc('mistral'), value: 'mistral' }
+                        ],
+                        valueType: 'string',
+                        rightValue: () => {
+                            const engine = ApplicationSettings.getString(SETTINGS_OCR_ENGINE, DEFAULT_OCR_ENGINE);
+                            return engine === 'mistral' ? lc('mistral') : lc('tesseract');
+                        },
+                        currentValue: () => ApplicationSettings.getString(SETTINGS_OCR_ENGINE, DEFAULT_OCR_ENGINE),
+                        onResult: (value) => {
+                            ocrService.ocrEngine = value;
+                        }
+                    },
+                    {
+                        id: 'setting',
+                        key: SETTINGS_MISTRAL_API_KEY,
+                        title: lc('mistral_api_key'),
+                        description: lc('mistral_api_key_desc'),
+                        type: 'prompt',
+                        valueType: 'string',
+                        rightValue: () => {
+                            const key = ApplicationSettings.getString(SETTINGS_MISTRAL_API_KEY, '');
+                            return key.length > 0 ? '••••••••' : lc('none');
+                        },
+                        textFieldProperties: { secure: false }
+                    },
                     {
                         type: 'switch',
                         id: SETTINGS_OCR_COPY_USE_SPACE,
