@@ -73,7 +73,7 @@ jobs:
         run: ns --version
 
       - name: Build debug APK
-        run: ns build android --env.adhoc
+        run: ns build android --env.adhoc --force
 
       - name: Prepare release metadata
         id: meta
